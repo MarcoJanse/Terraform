@@ -23,6 +23,7 @@ resource "azurerm_subnet" "workspace_subnet" {
   resource_group_name  = azurerm_resource_group.general-rg.name
   virtual_network_name = azurerm_virtual_network.workspace.name
   address_prefixes     = ["10.252.${var.address_space}.0/24"]
+  service_endpoints    = ["Microsoft.Storage"]
 }
 
 resource "random_id" "randomId" {
@@ -41,10 +42,32 @@ resource "azurerm_storage_account" "sharedStorage" {
   account_kind              = "StorageV2"
   account_replication_type  = "LRS"
   enable_https_traffic_only = true
+  queue_encryption_key_type = "Service"
+  shared_access_key_enabled = true
+  table_encryption_key_type = "Service"
+
+  blob_properties {
+    change_feed_enabled      = false
+    last_access_time_enabled = false
+    versioning_enabled       = false
+  }
+
+  share_properties {
+    retention_policy {
+      days = 7
+    }
+  }
+
+  network_rules {
+    default_action             = "Deny"
+    ip_rules                   = ["83.86.209.118", ]
+    virtual_network_subnet_ids = ["/subscriptions/7988622a-fe45-422d-aba5-7f2fa1d45f89/resourceGroups/mja-tryout-tst-rg/providers/Microsoft.Network/virtualNetworks/tryout-tst-vnet/subnets/tryout-tst-workspace-subnet", ]
+  }
 
   count = var.workspace_var
 
   tags = var.default_tags
+
 }
 
 resource "azurerm_storage_share" "storage_share" {
